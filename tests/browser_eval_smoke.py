@@ -38,6 +38,18 @@ async def wait_ready(session, timeout=30):
     return False
 
 
+async def wait_url(session, pred, timeout=20):
+    for _ in range(timeout * 2):
+        try:
+            url = await session.async_eval_javascript("return location.href")
+            if pred(url):
+                return url
+        except Exception:
+            pass  # mid-navigation
+        await asyncio.sleep(0.5)
+    return None
+
+
 async def page(session):
     return await session.async_eval_javascript(
         "return {title: document.title, url: location.href, "
@@ -62,21 +74,60 @@ async def main(connection):
     session = window.current_tab.current_session
     await asyncio.sleep(2)
     print("ready:", await wait_ready(session))
+    if "--logout-first" in sys.argv and (await page(session))["user"]:
+        # GitHub's sign-out is a POST form on /logout; submit it from the DOM.
+        await session.async_load_url("https://github.com/logout")
+        await wait_url(session, lambda u: "/logout" in u)
+        await wait_ready(session)
+        await session.async_eval_javascript(
+            "const f = document.querySelector('form[action=\"/logout\"]'); setTimeout(() => f.requestSubmit(), 50); return true")
+        print("logged out ->", await wait_url(session, lambda u: "/logout" not in u))
+        await session.async_load_url(URL)
+        await wait_url(session, lambda u: u.startswith(URL) or "/login" in u)
+        await wait_ready(session)
     print("before:", json.dumps(await page(session)))
     if LOGIN and (await page(session))["user"] is None:
         await session.async_load_url("https://github.com/login?return_to=" + URL)
+        await wait_url(session, lambda u: "/login" in u)
         await wait_ready(session)
         await set_field(session, "#login_field", op("--fields", "username"))
         await set_field(session, "#password", op("--fields", "password", "--reveal"))
-        await session.async_eval_javascript("document.querySelector('input[type=submit][name=commit]').click(); return true")
-        await asyncio.sleep(4)
+        await asyncio.sleep(1)
+        await session.async_eval_javascript("const f = document.querySelector('#login_field').form; setTimeout(() => f.requestSubmit(f.querySelector('input[name=commit]')), 50); return true")
+        if not await wait_url(session, lambda u: "/session" in u or "two-factor" in u or u.startswith(URL), timeout=30):
+            print("login stuck:", json.dumps(await session.async_eval_javascript(
+                "return {url: location.href, filled: (document.querySelector('#login_field')||{}).value?.length, flash: [...document.querySelectorAll('.flash-error, .js-flash-alert, [role=alert]')].map(e => e.innerText.trim()).join(' | ').slice(0, 300)}")))
         await wait_ready(session)
-        if await session.async_eval_javascript("return !!document.querySelector('#app_totp')"):
+        has_totp = False
+        for attempt in range(40):
+            if attempt == 10 and "two-factor" in (await session.async_eval_javascript("return location.href")):
+                # GitHub may default to a passkey / GitHub Mobile method; the TOTP form is here.
+                await session.async_load_url("https://github.com/sessions/two-factor/app")
+                await wait_url(session, lambda u: u.endswith("/two-factor/app"))
+                await wait_ready(session)
+            try:
+                has_totp = await session.async_eval_javascript("return !!document.querySelector('#app_totp')")
+            except Exception:
+                pass
+            if has_totp:
+                break
+            await asyncio.sleep(0.5)
+        if not has_totp:
+            print("2fa page:", json.dumps(await session.async_eval_javascript(
+                "return {url: location.href, inputs: [...document.querySelectorAll('input')].filter(e => e.type !== 'hidden').map(e => e.type + '#' + e.id + '/' + e.name), links: [...document.querySelectorAll('a,button')].map(e => (e.innerText||'').trim()).filter(t => t && t.length < 60).slice(0, 25)}")))
+        if has_totp:
             await set_field(session, "#app_totp", op("--otp"))
-            await session.async_eval_javascript(
-                "const f = document.querySelector('#app_totp').form; (f.requestSubmit ? f.requestSubmit() : f.submit()); return true")
-            await asyncio.sleep(4)
+            # GitHub's TOTP box submits itself on input; a second explicit submit re-sends the
+            # same code ("already been used"). Only submit if the page has not moved on.
+            moved = await wait_url(session, lambda u: "two-factor" not in u, timeout=6)
+            if not moved:
+                await session.async_eval_javascript(
+                    "const f = document.querySelector('#app_totp')?.form; if (f) setTimeout(() => f.requestSubmit(), 50); return true")
+                moved = await wait_url(session, lambda u: "two-factor" not in u)
             await wait_ready(session)
+            if not moved:
+                print("2fa stuck:", json.dumps(await session.async_eval_javascript(
+                    "return {url: location.href, value: (document.querySelector('#app_totp')||{}).value?.length, flash: [...document.querySelectorAll('.flash, .flash-error, [role=alert]')].map(e => e.innerText.trim()).join(' | ')}")))
         if not (await page(session))["url"].startswith(URL):
             await session.async_load_url(URL)
             await wait_ready(session)
