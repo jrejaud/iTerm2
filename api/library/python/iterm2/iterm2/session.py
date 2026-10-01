@@ -1152,7 +1152,7 @@ class Session:
         """
         invocation = iterm2.util.invocation_string(
             "iterm2.browser_set_inspectable",
-            {"enabled": enabled})
+            {"enabled": 1 if enabled else 0})
         await iterm2.rpc.async_invoke_method(
             self.connection, self.session_id, invocation, -1)
 
