@@ -24026,7 +24026,17 @@ static const NSTimeInterval PTYSessionFocusReportBellSquelchTimeIntervalThreshol
         return;
     }
     WKWebView *webView = _view.browserViewController.webView;
-    NSString *domain = webView.URL.host ?: @"(blank page)";
+    // Approval is per web origin, so only pages that have one qualify. about:blank and
+    // file:// pages would otherwise all share a single approval.
+    NSURL *pageURL = webView.URL;
+    NSString *scheme = pageURL.scheme.lowercaseString;
+    NSString *domain = pageURL.host.lowercaseString;
+    if (!domain.length || !([scheme isEqualToString:@"https"] || [scheme isEqualToString:@"http"])) {
+        completion(nil, [self loadURLErrorWithCode:6
+                                           message:@"browser_eval_js requires an http or https page"]);
+        return;
+    }
+    NSString *origin = [NSString stringWithFormat:@"%@://%@:%@", scheme, domain, pageURL.port ?: @""];
     iTermScriptHistoryEntry *entry = [[iTermAPIHelper sharedInstanceIfEnabled] scriptHistoryEntryForConnectionKey:connectionKey];
     NSString *scriptName = entry.name ?: @"A script";
     NSString *heading = [NSString stringWithFormat:
@@ -24049,6 +24059,16 @@ static const NSTimeInterval PTYSessionFocusReportBellSquelchTimeIntervalThreshol
         if (selection != kiTermWarningSelection0) {
             completion(nil, [weakSelf loadURLErrorWithCode:4
                                                    message:@"User denied permission to run JavaScript"]);
+            return;
+        }
+        // The prompt is asynchronous; the page may have navigated while it was up.
+        // Only run on the origin that was approved.
+        NSURL *nowURL = webView.URL;
+        NSString *nowOrigin = [NSString stringWithFormat:@"%@://%@:%@",
+                               nowURL.scheme.lowercaseString, nowURL.host.lowercaseString, nowURL.port ?: @""];
+        if (![nowOrigin isEqualToString:origin]) {
+            completion(nil, [weakSelf loadURLErrorWithCode:7
+                                                   message:@"The page navigated to a different site before the JavaScript could run"]);
             return;
         }
         NSString *body = [NSString stringWithFormat:@"const __itermResult = await (async () => {\n%@\n})();\nreturn JSON.stringify(__itermResult === undefined ? null : __itermResult);", js];
