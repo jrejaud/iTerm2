@@ -404,3 +404,23 @@ enum AppleIntelligenceRunner {
         return AITabTitleGenerator.condense(screen, blankLines: .collapseRuns)
     }
 }
+
+// Fork compat (SC-6056): Xcode 26.x (Swift 6.2) SDKs predate the macOS 27 FoundationModels
+// API this file targets — GenerationOptions(samplingMode:) was GenerationOptions(sampling:),
+// and SystemLanguageModel.tokenCount(for:) did not exist. The callers already fall back to
+// an estimate when tokenCount throws, so on an older SDK it simply throws.
+#if !compiler(>=6.3) && canImport(FoundationModels)
+@available(macOS 26, *)
+extension GenerationOptions {
+    init(samplingMode: SamplingMode?, maximumResponseTokens: Int? = nil) {
+        self.init(sampling: samplingMode, maximumResponseTokens: maximumResponseTokens)
+    }
+}
+
+@available(macOS 26, *)
+extension SystemLanguageModel {
+    func tokenCount<T>(for _: T) async throws -> Int {
+        throw CancellationError()
+    }
+}
+#endif
