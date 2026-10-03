@@ -1623,6 +1623,16 @@ message ListSessionsResponse {
     // True if the tab is pinned. Pinned tabs sit at the left of the tab bar and ask
     // for confirmation before closing. Added in protocol 1.21.
     optional bool pinned = 12;
+    // When the tab's group is a sub-group, the definition of its parent group.
+    // Nesting is one level deep. All of a parent's sub-group tabs carry the
+    // same parent values. tab_group_parent_id is unset for a top-level group;
+    // the other three are meaningful only when it is set. Added in protocol 1.21.
+    // (Fork numbering: 13-16, because the fork's pin API already took 12. The
+    // upstream nested-groups PR alone uses 12-15.)
+    optional string tab_group_parent_id = 13;
+    optional string tab_group_parent_name = 14;
+    optional string tab_group_parent_color = 15;
+    optional bool tab_group_parent_collapsed = 16;
   }
   repeated Window windows = 1;
   repeated SessionSummary buried_sessions = 2;

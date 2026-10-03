@@ -13296,6 +13296,10 @@ typedef struct ITMListSessionsResponse_Window__storage_ {
 @dynamic hasTabGroupColor, tabGroupColor;
 @dynamic hasTabGroupCollapsed, tabGroupCollapsed;
 @dynamic hasPinned, pinned;
+@dynamic hasTabGroupParentId, tabGroupParentId;
+@dynamic hasTabGroupParentName, tabGroupParentName;
+@dynamic hasTabGroupParentColor, tabGroupParentColor;
+@dynamic hasTabGroupParentCollapsed, tabGroupParentCollapsed;
 
 typedef struct ITMListSessionsResponse_Tab__storage_ {
   uint32_t _has_storage_[1];
@@ -13308,6 +13312,9 @@ typedef struct ITMListSessionsResponse_Tab__storage_ {
   NSString *tabGroupId;
   NSString *tabGroupName;
   NSString *tabGroupColor;
+  NSString *tabGroupParentId;
+  NSString *tabGroupParentName;
+  NSString *tabGroupParentColor;
 } ITMListSessionsResponse_Tab__storage_;
 
 // This method is threadsafe because it is initially called
@@ -13412,6 +13419,42 @@ typedef struct ITMListSessionsResponse_Tab__storage_ {
         .number = ITMListSessionsResponse_Tab_FieldNumber_Pinned,
         .hasIndex = 10,
         .offset = 11,  // Stored in _has_storage_ to save space.
+        .flags = GPBFieldOptional,
+        .dataType = GPBDataTypeBool,
+      },
+      {
+        .name = "tabGroupParentId",
+        .dataTypeSpecific.clazz = Nil,
+        .number = ITMListSessionsResponse_Tab_FieldNumber_TabGroupParentId,
+        .hasIndex = 12,
+        .offset = (uint32_t)offsetof(ITMListSessionsResponse_Tab__storage_, tabGroupParentId),
+        .flags = GPBFieldOptional,
+        .dataType = GPBDataTypeString,
+      },
+      {
+        .name = "tabGroupParentName",
+        .dataTypeSpecific.clazz = Nil,
+        .number = ITMListSessionsResponse_Tab_FieldNumber_TabGroupParentName,
+        .hasIndex = 13,
+        .offset = (uint32_t)offsetof(ITMListSessionsResponse_Tab__storage_, tabGroupParentName),
+        .flags = GPBFieldOptional,
+        .dataType = GPBDataTypeString,
+      },
+      {
+        .name = "tabGroupParentColor",
+        .dataTypeSpecific.clazz = Nil,
+        .number = ITMListSessionsResponse_Tab_FieldNumber_TabGroupParentColor,
+        .hasIndex = 14,
+        .offset = (uint32_t)offsetof(ITMListSessionsResponse_Tab__storage_, tabGroupParentColor),
+        .flags = GPBFieldOptional,
+        .dataType = GPBDataTypeString,
+      },
+      {
+        .name = "tabGroupParentCollapsed",
+        .dataTypeSpecific.clazz = Nil,
+        .number = ITMListSessionsResponse_Tab_FieldNumber_TabGroupParentCollapsed,
+        .hasIndex = 15,
+        .offset = 16,  // Stored in _has_storage_ to save space.
         .flags = GPBFieldOptional,
         .dataType = GPBDataTypeBool,
       },
