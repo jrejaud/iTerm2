@@ -65,6 +65,7 @@
 #import "iTermGitPoller.h"
 #import "iTermGitState+MainApp.h"
 #import "iTermGitStringMaker.h"
+#import "iTermGlobalSearchEngine.h"
 #import "iTermGlobalSearchResult.h"
 #import "iTermHistogram.h"
 #import "iTermImage+ImageWithData.h"
