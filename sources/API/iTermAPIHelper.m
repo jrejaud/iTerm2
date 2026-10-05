@@ -2419,6 +2419,7 @@ static BOOL iTermAPIHelperLastApplescriptAuthRequiredSetting;
                 tabMessage.tabGroupColor = [(tab.tabGroupColor ?: [NSColor systemBlueColor]) hexStringPreservingColorSpace];
                 tabMessage.tabGroupCollapsed = tab.tabGroupCollapsed;
             }
+            tabMessage.pinned = tab.isPinned;
             [windowMessage.tabsArray addObject:tabMessage];
         }
 
