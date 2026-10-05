@@ -112,4 +112,14 @@
     XCTAssertFalse(tab.isPinned);
 }
 
+// A tab whose window is gone must say so, not claim to be a tmux tab.
+- (void)testSetPinnedWithoutWindowReportsIt {
+    PTYTab *tab = [self makeTab];
+    tab.delegate = nil;
+    NSError *error = [self invokeSetPinned:YES onTab:tab];
+    XCTAssertNotNil(error);
+    XCTAssertFalse([error.localizedDescription containsString:@"tmux"], @"got: %@", error.localizedDescription);
+    XCTAssertFalse(tab.isPinned);
+}
+
 @end

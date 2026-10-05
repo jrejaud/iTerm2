@@ -8086,11 +8086,19 @@ backgroundColor:(NSColor *)backgroundColor {
 - (void)setPinnedWithCompletion:(void (^)(id, NSError *))completion
                          pinned:(NSNumber *)pinned {
     DLog(@"API set_pinned:%@ for %@", pinned, self);
-    if (![self.delegate tab:self setPinned:pinned.boolValue]) {
-        NSError *error = [NSError errorWithDomain:@"com.iterm2.set-pinned"
-                                             code:0
-                                         userInfo:@{ NSLocalizedDescriptionKey: @"tmux tabs can’t be pinned." }];
-        completion(nil, error);
+    // Name the actual reason: the delegate is weak, and a nil delegate also answers NO.
+    NSString *reason = nil;
+    if (self.isTmuxTab) {
+        reason = @"tmux tabs can’t be pinned.";
+    } else if (!self.delegate) {
+        reason = @"The tab is not in a window.";
+    } else if (![self.delegate tab:self setPinned:pinned.boolValue]) {
+        reason = @"The tab’s group contains a tmux tab, so the group can’t be pinned.";
+    }
+    if (reason) {
+        completion(nil, [NSError errorWithDomain:@"com.iterm2.set-pinned"
+                                            code:0
+                                        userInfo:@{ NSLocalizedDescriptionKey: reason }]);
         return;
     }
     completion(nil, nil);
